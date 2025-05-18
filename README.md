@@ -1,5 +1,7 @@
 Node.js Backend (Dockerized)
+
 This is a Dockerized Express backend application that connects to a MySQL database running outside of Docker on the local machine.
+
 📁 Project Structure
 backend/
 ├── Dockerfile            # Docker image definition
@@ -7,7 +9,9 @@ backend/
 ├── .env.example          # Example environment config
 ├── package.json          # Node.js dependencies
 └── README.md             # This file
+
 🛠️ Requirements
+
 Ensure you have:
 
 Docker
