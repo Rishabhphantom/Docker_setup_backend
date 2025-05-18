@@ -1,49 +1,43 @@
-# Nginx-reverse-proxy
-The following repo includes the required nginx config, backend config and front end config
+Node.js Backend (Dockerized)
+This is a Dockerized Express backend application that connects to a MySQL database running outside of Docker on the local machine.
+📁 Project Structure
+backend/
+├── Dockerfile            # Docker image definition
+├── server.js             # Express server with MySQL connection
+├── .env.example          # Example environment config
+├── package.json          # Node.js dependencies
+└── README.md             # This file
+🛠️ Requirements
+Ensure you have:
 
-React Web Application with Node.js Backend and Nginx Reverse Proxy 
+Docker
+Also ensure:
 
-This project consists of a React frontend, a Node.js Express backend, and a MySQL database. All API requests are routed through Nginx as a reverse proxy . 
-🛠️ Requirements 
+A MySQL server is running locally or accessible from your host.
+The required database and table are already created.
 
-    Git
-    Node.js & npm
-    MySQL
-    Nginx
+🐳 Build the Docker Image
+Run this command in the backend directory:
+docker build -t node-backend .
+This builds a Docker image named node-backend based on the instructions in the Dockerfile.
 
-1.📦 Set Up the Environment and Install Dependencies
-Clone Repositories
+🚀 Run the Container
+To run the container and connect it to your local MySQL server , use:
+docker run --name backend \
+  -p 4000:4000 \
+  -e DB_HOST=localhost \
+  -e DB_PORT=3306 \
+  -e DB_USER=root \
+  -e DB_PASSWORD=Asher976123@ \
+  -e DB_NAME=myapp \
+  -d node-backend
+  
+  
+  🗄️ MySQL Setup
+  Make sure the required database and table exist before starting the backend.
+  CREATE DATABASE myapp;
 
-git clone https://github.com/kkarki7120/frontend.git 
-git clone https://github.com/kkarki7120/backend.git 
-
-Install Frontend Dependencies
-cd frontend
-npm install
-
-Install Backend Dependencies
-cd ../backend
-npm install
-
-2. 🔧 Configure the Backend and Connect to MySQL
-cp .env.example .env
-nano .env
-
-Update with your MySQL credentials
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=react
-DB_PORT=3306
-PORT=4000
-
-Create MySQL Database and Table
-mysql -u root -p
-
-Run these SQL commands:
-
-CREATE DATABASE react;
-USE react;
+USE myapp;
 
 CREATE TABLE formData (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -51,82 +45,34 @@ CREATE TABLE formData (
   email VARCHAR(255),
   message TEXT
 );
-Exit MySQL:
-exit;
+We can verify data insertion after submitting the form via the frontend.
 
-Start the Backend Server
-cd backend
-node server.js
+🧪 Test the API
+After starting the container, test the API endpoint using curl :
 
-3. 🚀 Deploy Frontend and Backend Using Nginx as Reverse Proxy
-Build the React App
-cd ../frontend
-npm run build
+Submit Form Data
 
-The static files will be in the build/ directory.
-
-Configure Nginx
-Create a new Nginx config file:
-sudo nano /etc/nginx/sites-available/react-app
-
-Paste this configuration:
-
-server {
-    listen 80;
-
-    location / {
-        root /home/your-username/react-app/frontend/build;
-        index index.html;
-        try_files $uri $uri/ =404;
-    }
-
-    location /api/ {
-        proxy_pass http://localhost:4000/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
+curl -X POST http://localhost:4000/submit \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Doe","email":"john@example.com","message":"Hello World"}'
+  
+  Expected Response
+  {
+  "message": "Your response has been saved"
 }
 
-Enable the site::
-sudo ln -s /etc/nginx/sites-available/react-app /etc/nginx/sites-enabled/
+Check if Data Was Stored
 
-Test and reload Nginx:
-sudo nginx -t
-sudo systemctl reload nginx
+In MySQL CLI:
 
-Example API Request Through Nginx
-curl -X POST http://localhost/api/submit \
-     -H "Content-Type: application/json" \
-     -d '{"name":"Test","email":"test@example.com","message":"Test message"}'
-Expected response:
-{"message":"Your response has been saved"}
-
-
-✅ Final Directory Structure
-/home/your-username/react-app/
-├── frontend/
-│   ├── build/          # Static files served by Nginx
-│   └── ...
-├── backend/
-│   ├── server.js       # Express backend running on port 4000
-│   └── ...
-
-🧪 Testing
-1. Open browser: http://localhost
-2. Submit form
-3. Verify data is stored in MySQL:
-mysql -u root -p
-USE react;
+USE myapp;
 SELECT * FROM formData;
 
-🛠️ Troubleshooting
-If Nginx fails to start:
+You should see the submitted data.
 
-sudo tail -f /var/log/nginx/error.log
-Ensure backend is running on port 4000.
-Check .env file for correct database credentials.
+🔍 View Logs
+If you need to debug any issues:
 
-✅ React app is now live at http://localhost, and all API calls go through Nginx to Node.js backend.
+docker logs backend
+
+docker compose up --build
