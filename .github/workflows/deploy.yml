@@ -1,0 +1,60 @@
+name: Deploy App via Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build and Push Backend Image
+        run: |
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest -f backend/Dockerfile .
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest
+
+      - name: SSH into EC2 and Redeploy Containers
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_IP_ADDRESS }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            # Pull latest images
+            echo "Pulling latest Docker images..."
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest
+
+            # Stop and remove old containers
+            echo "Stopping old containers..."
+            docker stop frontend-app || true
+            docker rm frontend-app || true
+            docker stop backend-api || true
+            docker rm backend-api || true
+
+            # Write environment files
+            echo "${{ secrets.BACKEND_ENV }}" > /home/ubuntu/backend.env
+
+            # Run backend container
+            echo "Starting backend container..."
+            docker run -d \
+              --name backend-api \
+              -p 4000:4000 \
+              --env-file /home/ubuntu/backend.env \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-backend:latest
+
+            echo "Deployment completed successfully!"
